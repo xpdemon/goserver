@@ -14,17 +14,13 @@ spec:
       labels:
         app: go-app
     spec:
-      # Deux conteneurs dans le même Pod : app Go et Envoy
+      # 3 conteneurs dans le même Pod
       containers:
         - name: go-app
           image: xpdemon/go-server:latest
-          ports:
-            - containerPort: 8080
         - name: envoy
           image: xpdemon/envoy-proxy:latest
           ports:
             - containerPort: 80
         - name: ext-authz
           image: xpdemon/go-auth:latest
-          ports:
-            - containerPort: 9000

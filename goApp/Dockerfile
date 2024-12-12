@@ -3,7 +3,7 @@ FROM golang:1.23 AS builder
 WORKDIR /app
 
 # Copier le code source
-COPY . .
+COPY .. .
 
 # Compiler le binaire statiquement
 ENV CGO_ENABLED=0
