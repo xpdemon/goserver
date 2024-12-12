@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-app-with-envoy
+  labels:
+    app: go-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: go-app
+  template:
+    metadata:
+      labels:
+        app: go-app
+    spec:
+      # Deux conteneurs dans le même Pod : app Go et Envoy
+      containers:
+        - name: go-app
+          image: xpdemon/go-server:latest
+          ports:
+            - containerPort: 8080
+        - name: envoy
+          image: xpdemon/envoy-proxy:latest
+          ports:
+            - containerPort: 80
+        - name: ext-authz
+          image: xpdemon/go-auth:latest
+          ports:
+            - containerPort: 9000

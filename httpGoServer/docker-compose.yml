@@ -1,0 +1,20 @@
+version: '3'
+services:
+  go-app:
+    build: .
+    expose:
+      - "8080"
+
+  ext-authz:
+    build: ./auth
+    expose:
+      - "9000"
+
+  envoy:
+    build: ./envoy
+    depends_on:
+      - go-app
+      - ext-authz
+    ports:
+      - "8081:80"
+    command: ["envoy", "-c", "/etc/envoy/envoy.yaml"]
