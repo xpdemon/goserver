@@ -17,21 +17,29 @@ static_resources:
                     - name: service
                       domains: ["*"]
                       routes:
-                        - match: { prefix: "/" }
-                          route: { cluster: go_service }
+                        - match:
+                            prefix: "/"
+                          route:
+                            cluster: go_service
+                        - match:
+                            prefix: "/auth"
+                          route:
+                            cluster: go_service
+
                 http_filters:
                   - name: envoy.filters.http.ext_authz
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
                       http_service:
                         server_uri:
-                          uri: "127.0.0.1:9000"   # PAS de "http://"
+                          uri: "127.0.0.1:9000/auth"   # PAS de "http://"
                           cluster: ext_auth
                           timeout: 0.5s
                         path_prefix: "/auth"
                         authorization_request:
                           allowed_headers:
                             patterns:
+                              - exact: "set-cookie"
                               - exact: "authorization"
                   - name: envoy.filters.http.router
 
