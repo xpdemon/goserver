@@ -1,3 +1,5 @@
+# envoy-config.yaml
+
 static_resources:
   listeners:
     - name: listener_http
@@ -15,14 +17,34 @@ static_resources:
                   name: local_route
                   virtual_hosts:
                     - name: service
-                      domains: ["*"]
+                      domains: [ "*" ]
+                      typed_per_filter_config:
+                        envoy.filters.http.ext_authz:
+                          "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                          check_settings:
+                            context_extensions:
+                              virtual_host: service
                       routes:
+                        # Route vers "/authz" sans ext_authz
+                        - match: {prefix: "/authz" }
+                          route:
+                            cluster: ext_auth
+                          typed_per_filter_config:
+                            envoy.filters.http.ext_authz:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                              disabled: true
+
+                        # Route vers "/login" sans ext_authz
+                        - match: {prefix: "/login" }
+                          route:
+                            cluster: go_login
+                          typed_per_filter_config:
+                            envoy.filters.http.ext_authz:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                              disabled: true
+                        # Toutes les autres routes passent par ext_authz
                         - match:
                             prefix: "/"
-                          route:
-                            cluster: go_service
-                        - match:
-                            prefix: "/auth"
                           route:
                             cluster: go_service
 
@@ -32,16 +54,18 @@ static_resources:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
                       http_service:
                         server_uri:
-                          uri: "127.0.0.1:9000/auth"   # PAS de "http://"
+                          uri: 127.0.0.1:9000   # Inclure le schéma "http://"
                           cluster: ext_auth
                           timeout: 0.5s
-                        path_prefix: "/auth"
+                        path_prefix: "/authz"    # Endpoint pour ext_authz
                         authorization_request:
                           allowed_headers:
                             patterns:
-                              - exact: "set-cookie"
                               - exact: "authorization"
+                              - exact: "cookie"   # IMPORTANT pour transmettre le cookie
                   - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
 
   clusters:
     - name: go_service
@@ -57,6 +81,19 @@ static_resources:
                       address: 127.0.0.1
                       port_value: 8080
 
+    - name: go_login
+      type: STATIC
+      connect_timeout: 0.25s
+      load_assignment:
+        cluster_name: go_login
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: 127.0.0.1
+                      port_value: 8081
+
     - name: ext_auth
       type: STATIC
       connect_timeout: 0.25s
@@ -69,10 +106,3 @@ static_resources:
                     socket_address:
                       address: 127.0.0.1
                       port_value: 9000
-
-admin:
-  access_log_path: /dev/stdout
-  address:
-    socket_address:
-      address: 127.0.0.1
-      port_value: 9901
