@@ -16,7 +16,6 @@ func main() {
 		cookie, err := r.Cookie("session_id")
 		if err != nil {
 			fmt.Println("Erreur cookie:", err)
-			// Retourner 401 pour indiquer une non-authentification
 			http.Redirect(w, r, "/login", http.StatusFound)
 			return
 		}
