@@ -3,33 +3,47 @@
 package main
 
 import (
+	"auth/handle"
 	"fmt"
 	"github.com/xpdemon/session"
+	"github.com/xpdemon/session/cache"
 	"net/http"
+	"time"
 )
 
+func initApp() *cache.Cache {
+	c := cache.NewCache()
+	session.RenewKey(c)
+	return c
+}
+
+func updateApp(c *cache.Cache) {
+	session.RenewKey(c)
+	fmt.Println("Key renewed")
+}
+
+func scheduleUpdateApp(cache *cache.Cache) {
+	ticker := time.NewTicker(30 * time.Minute) // Intervalle de 30 minutes
+	defer ticker.Stop()
+
+	for range ticker.C {
+		updateApp(cache)
+		fmt.Println(cache)
+	}
+}
+
 func main() {
+
+	c := initApp()
+	go scheduleUpdateApp(c)
+
+	http.HandleFunc("/sign", func(w http.ResponseWriter, r *http.Request) {
+		handle.Sign(w, r, c)
+	})
+
 	// Handler pour "/authz" - utilisé par ext_authz pour l'authentification
 	http.HandleFunc("/authz/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("you are on /authz")
-
-		cookie, err := r.Cookie("session_id")
-		if err != nil {
-			fmt.Println("Erreur cookie:", err)
-			http.Redirect(w, r, "/login", http.StatusFound)
-			return
-		}
-		_, e := session.ValidateSignedID(cookie.Value)
-		if e != nil {
-			fmt.Println("Erreur session:", e)
-			// Session invalide ou falsifiée
-			http.Redirect(w, r, "/login", http.StatusFound)
-			return
-		}
-
-		// Session valide
-		w.WriteHeader(http.StatusOK)
-		http.Redirect(w, r, "/", http.StatusFound)
+		handle.Auth(w, r, c)
 	})
 
 	fmt.Println("ext_authz service running on :9000")

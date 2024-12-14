@@ -3,25 +3,12 @@ package main
 import (
 	"fmt"
 	"github.com/xpdemon/session"
+	"io"
 	"net/http"
+	"strings"
 )
 
 func main() {
-	// Handler principal pour "/" - protégé
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("you are on /")
-
-		_, err := r.Cookie("session_id")
-		if err != nil {
-			fmt.Println("Erreur cookie:", err)
-			http.Redirect(w, r, "/login", http.StatusFound)
-			return
-		}
-
-		// La validation est gérée par Envoy via ext_authz
-		// Ici, vous pouvez ajouter des fonctionnalités supplémentaires si nécessaire
-		fmt.Fprintln(w, "Bienvenue, vous êtes authentifié !")
-	})
 
 	// Handler pour "/login"
 	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
@@ -61,7 +48,9 @@ func main() {
 					return
 				}
 
-				signed := session.SignID(sid)
+				fmt.Println("sid: " + sid)
+				signed := signId(sid)
+				fmt.Println("signed: " + signed)
 
 				// Générer un cookie de session signé
 				http.SetCookie(w, &http.Cookie{
@@ -82,4 +71,30 @@ func main() {
 	if err != nil {
 		fmt.Println("Erreur serveur:", err)
 	}
+}
+
+func signId(id string) string {
+	r := strings.NewReader(id)
+	fmt.Println(" send request to authz")
+	resp, err := http.Post("http://0.0.0.0:9000/sign", "", r)
+	if err != nil {
+		return fmt.Sprint(err)
+	}
+
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			fmt.Println("Erreur fermeture body:", err)
+		}
+	}(resp.Body)
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Sprint(err)
+	}
+
+	fmt.Println(" got response from authz" + string(body))
+
+	return string(body)
+
 }

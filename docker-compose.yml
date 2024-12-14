@@ -1,0 +1,18 @@
+services:
+  go-login:
+    build:
+      context: ./login
+    image: xpdemon/go-login:latest
+  go-auth:
+    build:
+      context: ./auth
+    image: xpdemon/go-auth:latest
+  envoy-proxy:
+    build:
+      context: ./envoy
+    image: xpdemon/envoy-proxy:latest
+  go-app:
+    build:
+      context: ./goApp
+    image: xpdemon/go-server:latest
+
