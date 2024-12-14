@@ -24,3 +24,5 @@ spec:
             - containerPort: 80
         - name: ext-authz
           image: xpdemon/go-auth:latest
+        - name: go-login
+          image: xpdemon/go-login:latest

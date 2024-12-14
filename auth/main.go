@@ -1,44 +1,54 @@
+// ext-authz/main.go
+
 package main
 
 import (
-	"encoding/base64"
+	"auth/handle"
 	"fmt"
+	"github.com/xpdemon/session"
+	"github.com/xpdemon/session/cache"
 	"net/http"
-	"strings"
+	"time"
 )
 
-func main() {
-	http.HandleFunc("/auth/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf("request receive %v\n", r.RequestURI)
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		if !strings.HasPrefix(authHeader, "Basic ") {
-			w.WriteHeader(http.StatusForbidden)
-			return
-		}
+func initApp() *cache.Cache {
+	c := cache.NewCache()
+	session.RenewKey(c)
+	return c
+}
 
-		encoded := strings.TrimPrefix(authHeader, "Basic ")
-		decoded, err := base64.StdEncoding.DecodeString(encoded)
-		if err != nil {
-			w.WriteHeader(http.StatusForbidden)
-			return
-		}
-		parts := strings.SplitN(string(decoded), ":", 2)
-		if len(parts) != 2 {
-			w.WriteHeader(http.StatusForbidden)
-			return
-		}
-		user, pass := parts[0], parts[1]
-		if user == "admin" && pass == "secret" {
-			w.WriteHeader(http.StatusOK)
-		} else {
-			w.WriteHeader(http.StatusForbidden)
-		}
+func updateApp(c *cache.Cache) {
+	session.RenewKey(c)
+	fmt.Println("Key renewed")
+}
+
+func scheduleUpdateApp(cache *cache.Cache) {
+	ticker := time.NewTicker(30 * time.Minute) // Intervalle de 30 minutes
+	defer ticker.Stop()
+
+	for range ticker.C {
+		updateApp(cache)
+		fmt.Println(cache)
+	}
+}
+
+func main() {
+
+	c := initApp()
+	go scheduleUpdateApp(c)
+
+	http.HandleFunc("/sign", func(w http.ResponseWriter, r *http.Request) {
+		handle.Sign(w, r, c)
+	})
+
+	// Handler pour "/authz" - utilisé par ext_authz pour l'authentification
+	http.HandleFunc("/authz/", func(w http.ResponseWriter, r *http.Request) {
+		handle.Auth(w, r, c)
 	})
 
 	fmt.Println("ext_authz service running on :9000")
-	http.ListenAndServe("0.0.0.0:9000", nil)
+	err := http.ListenAndServe("0.0.0.0:9000", nil)
+	if err != nil {
+		fmt.Println("Erreur serveur:", err)
+	}
 }
