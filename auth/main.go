@@ -3,8 +3,8 @@
 package main
 
 import (
-	"auth/sessionId"
 	"fmt"
+	"github.com/xpdemon/session"
 	"net/http"
 )
 
@@ -19,8 +19,7 @@ func main() {
 			http.Redirect(w, r, "/login", http.StatusFound)
 			return
 		}
-
-		_, e := sessionId.ValidateSignedSessionID(cookie.Value)
+		_, e := session.ValidateSignedID(cookie.Value)
 		if e != nil {
 			fmt.Println("Erreur session:", e)
 			// Session invalide ou falsifiée

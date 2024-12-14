@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"login/session"
+	"github.com/xpdemon/session"
 	"net/http"
 )
 
@@ -61,7 +61,7 @@ func main() {
 					return
 				}
 
-				signed := session.SignSessionID(sid)
+				signed := session.SignID(sid)
 
 				// Générer un cookie de session signé
 				http.SetCookie(w, &http.Cookie{
