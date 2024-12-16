@@ -15,4 +15,8 @@ services:
     build:
       context: ./goApp
     image: xpdemon/go-server:latest
+  user-db:
+    build:
+      context: ./userDb
+    image: xpdemon/user-db:latest
 

@@ -50,6 +50,23 @@ static_resources:
                             envoy.filters.http.ext_authz:
                               "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
                               disabled: true
+                        # Route vers "/login" sans ext_authz
+                        - match: { prefix: "/addUser" }
+                          route:
+                            cluster: user_db
+                          typed_per_filter_config:
+                            envoy.filters.http.ext_authz:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                              disabled: true
+
+                        # Route vers "/login" sans ext_authz
+                        - match: { prefix: "/validateUser" }
+                          route:
+                            cluster: user_db
+                          typed_per_filter_config:
+                            envoy.filters.http.ext_authz:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                              disabled: true
                         # Toutes les autres routes passent par ext_authz
                         - match:
                             prefix: "/"
@@ -76,6 +93,19 @@ static_resources:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
 
   clusters:
+    - name: user_db
+      type: STATIC
+      connect_timeout: 0.25s
+      load_assignment:
+        cluster_name: user_db
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: 127.0.0.1
+                      port_value: 8085
+
     - name: go_service
       type: STATIC
       connect_timeout: 0.25s
