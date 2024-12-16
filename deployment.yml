@@ -14,6 +14,10 @@ spec:
       labels:
         app: go-app
     spec:
+      volumes:
+        - name: user-db-storage
+          persistentVolumeClaim:
+            claimName: user-db-pvc
       # 3 conteneurs dans le même Pod
       containers:
         - name: go-app
@@ -26,3 +30,8 @@ spec:
           image: xpdemon/go-auth:latest
         - name: go-login
           image: xpdemon/go-login:latest
+        - name: user-db
+          image: xpdemon/user-db:latest
+          volumeMounts:
+            - name: user-db-storage
+              mountPath: /data
