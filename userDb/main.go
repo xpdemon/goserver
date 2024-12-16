@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"github.com/xpdemon/userDb/database"
 	"github.com/xpdemon/userDb/handle"
 	"log"
@@ -23,6 +24,7 @@ func main() {
 	})
 
 	http.HandleFunc("/validateUser", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("validateUser reached")
 		handle.ValidateUser(db, w, r)
 	})
 

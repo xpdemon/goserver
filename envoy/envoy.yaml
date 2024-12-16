@@ -58,6 +58,7 @@ static_resources:
                             envoy.filters.http.ext_authz:
                               "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
                               disabled: true
+
                         # Route vers "/login" sans ext_authz
                         - match: { prefix: "/validateUser" }
                           route:
