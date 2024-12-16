@@ -4,32 +4,39 @@ import (
 	"fmt"
 	"github.com/xpdemon/session"
 	"github.com/xpdemon/session/cache"
-	"io"
 	"net/http"
 )
 
-func Sign(w http.ResponseWriter, r *http.Request, c *cache.Cache) {
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			fmt.Println("Erreur fermeture body:", err)
-		}
-	}(r.Body)
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		fmt.Println("Erreur lecture body:", err)
+func Authenticate(w http.ResponseWriter, r *http.Request, c *cache.Cache) {
+	// Générer un session id + signature
+	id, er := session.GenerateSessionID(32)
+	if er != nil {
+		fmt.Println("Erreur génération ID:", er)
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
 	}
-	id := string(body)
+	signed := sign(id, c)
+
+	// Générer un cookie de session signé
+	http.SetCookie(w, &http.Cookie{
+		Name:  "session_id",
+		Value: signed,
+		Path:  "/",
+	})
+	return
+
+}
+
+func sign(id string, c *cache.Cache) string {
+
 	sid := session.SignID(id, c)
 	fmt.Println("id: " + id)
 	fmt.Println("signed id: " + sid)
-	_, e := w.Write([]byte(sid))
-	if e != nil {
-		fmt.Println(e.Error())
-	}
+
+	return sid
 }
 
-func Auth(w http.ResponseWriter, r *http.Request, c *cache.Cache) {
+func Authorize(w http.ResponseWriter, r *http.Request, c *cache.Cache) {
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
 		fmt.Println("Erreur cookie:", err)

@@ -37,13 +37,14 @@ func main() {
 	c := initApp()
 	go scheduleUpdateApp(c)
 
-	http.HandleFunc("/sign", func(w http.ResponseWriter, r *http.Request) {
-		handle.Sign(w, r, c)
+	http.HandleFunc("/authenticate", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("authenticate reached")
+		handle.Authenticate(w, r, c)
 	})
 
-	// Handler pour "/authz" - utilisé par ext_authz pour l'authentification
-	http.HandleFunc("/authz/", func(w http.ResponseWriter, r *http.Request) {
-		handle.Auth(w, r, c)
+	// Handler pour "/authorize" - utilisé par ext_authz pour l'authentification
+	http.HandleFunc("/authorize/", func(w http.ResponseWriter, r *http.Request) {
+		handle.Authorize(w, r, c)
 	})
 
 	fmt.Println("ext_authz service running on :9000")
