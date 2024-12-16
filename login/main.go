@@ -36,32 +36,20 @@ func main() {
 				http.Redirect(w, r, "/login", http.StatusFound)
 				return
 			}
-			user := r.Form.Get("username")
-			pass := r.Form.Get("password")
 
-			if user == "admin" && pass == "secret" {
-				// Générer un session id + signature
-				sid, er := session.GenerateSessionID(32)
-				if er != nil {
-					fmt.Println("Erreur génération ID:", er)
-					http.Redirect(w, r, "/login", http.StatusFound)
-					return
-				}
+			userPwd := strings.Join([]string{r.Form.Get("username"), r.Form.Get("password")}, ":")
 
-				fmt.Println("sid: " + sid)
-				signed := signId(sid)
-				fmt.Println("signed: " + signed)
+			response, err := http.Post("http://127.0.0.1:8085", "", strings.NewReader(userPwd))
+			if err != nil {
+				fmt.Println("impossible de joindre la base de données")
+			}
 
-				// Générer un cookie de session signé
-				http.SetCookie(w, &http.Cookie{
-					Name:  "session_id",
-					Value: signed,
-					Path:  "/",
-				})
-				http.Redirect(w, r, "/", http.StatusFound)
-			} else {
-				// Afficher un message d'erreur ou rediriger
+			switch response.StatusCode {
+			case http.StatusOK:
+				generateSid(w, r)
+			case http.StatusForbidden:
 				http.Redirect(w, r, "/login", http.StatusFound)
+
 			}
 		}
 	})
@@ -71,6 +59,28 @@ func main() {
 	if err != nil {
 		fmt.Println("Erreur serveur:", err)
 	}
+}
+
+func generateSid(w http.ResponseWriter, r *http.Request) {
+	// Générer un session id + signature
+	sid, er := session.GenerateSessionID(32)
+	if er != nil {
+		fmt.Println("Erreur génération ID:", er)
+		http.Redirect(w, r, "/login", http.StatusFound)
+		return
+	}
+
+	fmt.Println("sid: " + sid)
+	signed := signId(sid)
+	fmt.Println("signed: " + signed)
+
+	// Générer un cookie de session signé
+	http.SetCookie(w, &http.Cookie{
+		Name:  "session_id",
+		Value: signed,
+		Path:  "/",
+	})
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 func signId(id string) string {
