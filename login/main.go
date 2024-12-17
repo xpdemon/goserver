@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/xpdemon/session"
-	"io"
 	"net/http"
 	"strings"
 )
@@ -39,14 +37,24 @@ func main() {
 
 			userPwd := strings.Join([]string{r.Form.Get("username"), r.Form.Get("password")}, ":")
 
-			response, err := http.Post("http://127.0.0.1:8085/validateUser", "", strings.NewReader(userPwd))
+			response, err := http.Post("http://0.0.0.0:8085/validateUser", "", strings.NewReader(userPwd))
 			if err != nil {
 				fmt.Println("impossible de joindre la base de données")
 			}
 
 			switch response.StatusCode {
 			case http.StatusOK:
-				generateSid(w, r)
+				resp, err := http.Get("http://0.0.0.0:9000/authenticate")
+				if err != nil {
+					fmt.Println(err)
+				}
+
+				for _, cook := range resp.Cookies() {
+					http.SetCookie(w, cook)
+
+				}
+				http.Redirect(w, r, "/", http.StatusFound)
+
 			case http.StatusForbidden:
 				http.Redirect(w, r, "/login", http.StatusFound)
 
@@ -59,45 +67,4 @@ func main() {
 	if err != nil {
 		fmt.Println("Erreur serveur:", err)
 	}
-}
-
-func generateSid(w http.ResponseWriter, r *http.Request) {
-	// Générer un session id + signature
-	sid, er := session.GenerateSessionID(32)
-	if er != nil {
-		fmt.Println("Erreur génération ID:", er)
-		http.Redirect(w, r, "/login", http.StatusFound)
-		return
-	}
-	signed := signId(sid)
-
-	// Générer un cookie de session signé
-	http.SetCookie(w, &http.Cookie{
-		Name:  "session_id",
-		Value: signed,
-		Path:  "/",
-	})
-	http.Redirect(w, r, "/", http.StatusFound)
-}
-
-func signId(id string) string {
-	r := strings.NewReader(id)
-	resp, err := http.Post("http://0.0.0.0:9000/sign", "", r)
-	if err != nil {
-		return fmt.Sprint(err)
-	}
-
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			fmt.Println("Erreur fermeture body:", err)
-		}
-	}(resp.Body)
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Sprint(err)
-	}
-	return string(body)
-
 }
