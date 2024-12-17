@@ -25,16 +25,16 @@ static_resources:
                             context_extensions:
                               virtual_host: service
                       routes:
-                        # Route vers "/authz" sans ext_authz
-                        - match: {prefix: "/authz" }
+                        # Route vers "/authorize" sans ext_authz
+                        - match: {prefix: "/authorize" }
                           route:
                             cluster: ext_auth
                           typed_per_filter_config:
                             envoy.filters.http.ext_authz:
                               "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
                               disabled: true
-                        # Route vers "/sign" sans ext_authz
-                        - match: { prefix: "/sign" }
+                        # Route vers "/authenticate" sans ext_authz
+                        - match: { prefix: "/authenticate" }
                           route:
                             cluster: ext_auth
                           typed_per_filter_config:
@@ -73,6 +73,7 @@ static_resources:
                           route:
                             cluster: go_service
 
+
                 http_filters:
                   - name: envoy.filters.http.ext_authz
                     typed_config:
@@ -82,10 +83,11 @@ static_resources:
                           uri: 127.0.0.1:9000   # Inclure le schéma "http://"
                           cluster: ext_auth
                           timeout: 0.5s
-                        path_prefix: "/authz"    # Endpoint pour ext_authz
+                        path_prefix: "/authorize"    # Endpoint pour ext_authz
                         authorization_request:
                           allowed_headers:
                             patterns:
+                              - exact: "set-cookie"
                               - exact: "authorization"
                               - exact: "cookie"   # IMPORTANT pour transmettre le cookie
                   - name: envoy.filters.http.router
